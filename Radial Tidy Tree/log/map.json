@@ -1,0 +1,27 @@
+{
+	"name": "China",
+	"children": [
+		{"name": "Beijing"},
+		{"name": "Shandong",
+		 "children": [
+			 {"name": "Jinan"},
+			 {"name": "Qingdao"}
+		 ]},
+		{"name": "Tianjin"},
+		{"name": "Shanghai"},
+		{"name": "Sichuan",
+		 "children": [
+			 {"name": "Chengdu"},
+			 {"name": "Mianyang"},
+			 {"name": "Guangan"},
+			 {"name": "Guangyuan"}
+		 ]},
+		{"name": "Chongqing"},
+		{"name": "Guizhou",
+		 "children": [
+			 {"name": "Guiyang"},
+			 {"name": "Zunyi"},
+			 {"name": "Liupanshui"}
+		 ]}
+	]
+}

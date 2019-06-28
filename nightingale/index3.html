@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>shape</title>
+        <script type="text/javascript" src="d3/d3.v3.js"></script>
+
+    </head>
+    <body>
+		<p>nihaoddd</p>
+		<script>
+			var w = 600,h = 600;
+    		var data = [1,2,3,4,5];
+			var data = [
+				{city:"上海",number:25},{city:"北京",number:22},{city:"南京",number:19},
+				{city:"青岛",number:23},{city:"大连",number:5},{city:"南京",number:40}
+			];
+			var color = d3.scale.category10();   //有十种颜色的颜色比例尺
+    		var pie = d3.layout.pie()
+						.value(function(d){
+							return d.number;
+						});
+    		var svg = d3.select("body")
+				.append("svg")
+				.attr("width",w)
+				.attr("height",h);
+			
+    		var arc = d3.svg.arc()
+				.outerRadius([w/4])
+				.innerRadius([0]);   //注意的地方是必须要加上内部半径，否则后来算不出扇形的中心位置
+			
+    		var arcs = svg.selectAll("g")
+				.data(pie(data))
+				.enter()
+				.append("g")
+				.attr("transform","translate("+w/2 +","+h/2+")");
+			
+    		arcs.append("path")
+				.attr("d",arc)
+				.attr("fill", function (d,i) {
+        			return color(i);
+    			});
+			
+    		arcs.append("text")
+				.attr("transform", function (d) {
+					console.log(d);
+        			return "translate("+arc.centroid(d)+")";
+    			})
+				.attr("text-anchor","start")
+				.text(function (d) {
+        			return d.value;
+    			});
+			
+			//添加连接弧外文字的直线元素
+			arcs.append("line")
+				.attr("stroke","black")
+				.attr("x1",function(d){return arc.centroid(d)[0]*2;})
+				.attr("y1",function(d){return arc.centroid(d)[1]*2;})
+				.attr("x2",function(d){return arc.centroid(d)[0]*2.2;})
+				.attr("y2",function(d){return arc.centroid(d)[1]*2.2;});
+			
+			arcs.append("text")
+				.attr("transform",function(d){
+				    var x=arc.centroid(d)[0]*2.3;
+			    	var y=arc.centroid(d)[1]*2.3;
+					return "translate("+x+","+y+")";
+			    })
+				.attr("text-anchor","middle")
+				.text(function(d){
+				    console.log(d.data.city);
+					return d.data.city;
+			    });
+			
+		
+
+			
+
+		</script>
+	</body>
+	
+</html>

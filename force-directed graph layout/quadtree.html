@@ -1,0 +1,513 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>无标题文档</title>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<style>
+.link {
+  stroke: #000;
+  stroke-width: 1.0px;
+}
+
+.node {
+  cursor: move;
+  fill:#F48133;
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+.node2 {
+  cursor: move;
+  fill:#9704A0;
+  stroke:#000000;
+  stroke-width: 2.5px;
+}
+
+.node.fixed {
+  fill: #f00;
+}
+</style>
+</head>
+
+<body>
+</body>
+<script>
+//class Rectangle {
+//    // constructor
+//    constructor(height=0, width=0) {
+//        this.height = height;
+//        this.width = width;
+//    }
+//    // Getter
+//    get area() {
+//        return this.calcArea()
+//    }
+//    // Method
+//    calcArea() {
+//        return this.height * this.width;
+//    }
+//    
+//}
+//const square = new Rectangle(10, 10);
+//
+//console.log(square.area);
+//// 100
+//let p = new Rectangle();
+//console.log(p.height);
+//  
+  function Node(id = null, x = null, y = null) {
+    this.id = id;
+    this.x = x;
+    this.y = y;
+    this.force_x=0;
+    this.force_y=0;
+  }
+  function Edge(id = null, source = null, target = null) {
+    this.id = id;
+    this.source = source;
+    this.target = target;
+  }
+  
+  let width=1000;
+  let height=500;
+  let padding=10;
+  
+  L = 20;
+  K_r = 1500;
+  K_s = 1;
+  delta_t = 2;
+
+  class  Rect{
+    constructor(left=0,right=0,top=0,bottom=0){
+      this.left=left;
+      this.right=right;
+      this.top=top;
+      this.bottom=bottom;
+    } 
+    subdivide(){
+      return [new Rect(this.left,(this.right+this.left)/2,this.top,(this.top+this.bottom)/2),
+              new Rect((this.right+this.left)/2,this.right,this.top,(this.top+this.bottom)/2),
+              new Rect(this.left,(this.right+this.left)/2,(this.top+this.bottom)/2,this.bottom),
+              new Rect((this.right+this.left)/2,this.right,(this.top+this.bottom)/2,this.bottom)
+             ]
+    }
+
+  }
+  
+  
+  class QuadTree{
+    //构造器
+    constructor(rect,depth){
+      this.rect=rect;
+      this.depth=depth;
+      this.num=0;
+      this.objects=[];
+      this.nodes=[];
+      
+      this.max_objects=1;
+      
+    }
+    
+    //分割
+    split(){
+      let ndepth=this.depth+1;
+      let rects=this.rect.subdivide();
+      this.nodes[0]=new QuadTree(rects[0],ndepth);
+      this.nodes[1]=new QuadTree(rects[1],ndepth);
+      this.nodes[2]=new QuadTree(rects[2],ndepth);
+      this.nodes[3]=new QuadTree(rects[3],ndepth);
+    }
+    //是否在当前树所表示的矩形范围中
+    isIn(object){
+      if(object.x>this.rect.left&&object.x<this.rect.right){
+        if(object.y>this.rect.top&&object.y<this.rect.bottom){
+          return true;
+        }
+      }  
+      return false;
+          
+    }
+    //获取对象所在矩形范围
+    getIndex(object){
+      for(let i=0;i<4;i++){
+        if(this.nodes[i].isIn(object)){
+          return i;
+        }
+      }
+      return -1;
+    }
+    //向树中插入一个对象
+    insert(object){
+      let i=0,index;
+      this.num++;
+
+      if(typeof this.nodes[0] != 'undefined'){
+        this.objects[0].x=(this.objects[0].x+object.x)/2;
+        this.objects[0].y=(this.objects[0].y+object.y)/2;
+        //console.log(this.objects[0]);
+        index=this.getIndex(object);
+        if(index!=-1){
+          this.nodes[index].insert(object);
+          return;
+        }
+      }
+      
+      this.objects.push(object);
+
+      if(this.objects.length>this.max_objects){
+
+        //分裂父子树
+        if( typeof this.nodes[0] == 'undefined' ) {
+          this.split();
+        }
+        
+        //将父子树中的节点按规则添加到子树
+        let tx=0,ty=0;
+        let tn=this.objects.length;
+        while(i<this.objects.length){
+          index = this.getIndex( this.objects[ i ] );
+          if( index !== -1 ){
+            tx+=this.objects[i].x;
+            ty+=this.objects[i].y;
+            //console.log(tx);
+            this.nodes[index].insert( this.objects[i] );
+          }
+
+          i++;
+
+        }
+        this.objects=[];
+//        while(i<this.objects.length){
+//          index = this.getIndex( this.objects[ i ] );
+//          if(this.depth==1)
+//          console.log("i",i)
+//          if( index !== -1 ) {				
+//            tx+=this.objects[i].x;
+//            ty+=this.objects[i].y;
+//            //console.log(tx);
+//            this.nodes[index].insert( this.objects[i] );
+//            this.objects.splice(i,1);
+//          } else {
+//            i = i + 1;
+//          }
+//        }
+        //console.log({x:tx/tn,y:ty/tn});
+        this.objects.push(new Node(-1,tx/tn,ty/tn));
+        
+        
+        
+      }
+      
+      
+    }
+    
+
+    //计算某个节点受到的斥力
+    calforce(object){
+      if(typeof this.objects[0] == 'undefined')//空结点
+        return;
+      
+      if(typeof this.nodes[0] == 'undefined'){//外部结点
+        if(object.id == this.objects[0].id)//本身不计算
+          return;
+        //计算两个结点之间的斥力
+        let node1=object;
+        let node2=this.objects[0];
+        let dx=node1.x-node2.x;
+        let dy=node1.y-node2.y;
+        if(dx!=0||dy!=0){
+          let distanceSquared=dx*dx+dy*dy;
+          let distance=Math.sqrt(distanceSquared);
+          let force=K_r/distanceSquared;
+          let fx=force*dx/distance;
+          let fy=force*dy/distance;
+          node1.force_x+=fx;
+          node1.force_y+=fy;
+          node2.force_x-=fx;
+          node2.force_y-=fy;
+
+        }
+
+      
+        
+      }
+      else{//内部节点
+        //计算两个结点之间的斥力
+        let node1=object;
+        let node2=this.objects[0];
+        let dx=node1.x-node2.x;
+        let dy=node1.y-node2.y;
+        let distanceSquared=dx*dx+dy*dy;
+        let distance=Math.sqrt(distanceSquared);
+        let theta=0.5;
+        
+        if((width)/distance<theta){
+
+
+          if(dx!=0||dy!=0){
+            let distanceSquared=dx*dx+dy*dy;
+            let distance=Math.sqrt(distanceSquared);
+            let force=K_r/distanceSquared;
+            let fx=this.num*force*dx/distance;
+            let fy=this.num*force*dy/distance;
+            node1.force_x+=fx;
+            node1.force_y+=fy;
+            //node2.force_x-=fx;
+            //node2.force_y-=fy;
+            this.preorder(-fx,-fy);
+
+          }
+        }
+        else{
+          
+          for(let i=0;i<4;i++){
+            //console.log("j",i+"  "+this.nodes[i]);
+            this.nodes[i].calforce(object);
+          }      
+        }
+
+        
+      }
+      
+    }//calforce结束
+    
+    preorder(fx,fy){
+      if(typeof this.objects[0] == 'undefined')//空结点
+        return;
+      
+      if(typeof this.nodes[0] == 'undefined'){//外部结点
+        this.objects.fx+=fx;
+        this.objects.fy+=fy;
+      }
+      else{//内部节点
+
+          for(let i=0;i<4;i++){
+            this.nodes[i].preorder(fx,fy);
+          }      
+
+
+        
+      }
+      
+    }
+    
+    
+    //记录要画的边
+    calline(line){
+      if(typeof this.nodes[0] != 'undefined'){
+        line.push({x1:this.rect.left,y1:(this.rect.top+this.rect.bottom)/2,x2:this.rect.right,y2:(this.rect.top+this.rect.bottom)/2});
+        line.push({x1:(this.rect.left+this.rect.right)/2,y1:this.rect.top,x2:(this.rect.left+this.rect.right)/2,y2:this.rect.bottom});
+        for(let i=0;i<4;i++){
+          this.nodes[i].calline(line);
+        }
+      }
+    }
+    
+    //记录要画的点
+    calnode(node){
+//      if(typeof node == 'undefined'){
+//        return;
+//      }
+      //console.log(node);
+      if(typeof this.objects[0] != 'undefined'){
+        
+        //console.log(this.objects[0]);
+        node.push(this.objects[0]);
+      }
+       
+      if(typeof this.nodes[0] != 'undefined'){
+        
+        for(let i=0;i<4;i++){
+          this.nodes[i].calnode(node);
+        }
+        
+      }
+    }
+    
+    
+  }
+  
+  
+
+  
+//  let width=900;//见60行
+//  let height=500;
+  
+  let nodes = [];
+  let edges = [];
+  let num=200;
+  let lenn=0,lene=0;
+  for (let i = 0; i < num; i++) {
+    nodes.push(new Node(i,Math.random()*width,Math.random()*height));
+  }
+  
+  for(let i=0;i<16;i++){
+    edges.push(new Edge(lene++,70,i));
+  }
+  
+  for(let i=16;i<48;i++){
+    edges.push(new Edge(lene++,71,i));
+  }
+  for(let i=48;i<70;i++){
+    edges.push(new Edge(lene++,72,i));
+  }
+  for(let i=77;i<100;i++){
+    edges.push(new Edge(lene++,73,i));
+  }
+  for(let i=100;i<120;i++){
+    edges.push(new Edge(lene++,74,i));
+  }
+  for(let i=120;i<150;i++){
+    edges.push(new Edge(lene++,75,i));
+  }
+  for(let i=150;i<190;i++){
+    edges.push(new Edge(lene++,76,i));
+  }
+  edges.push(new Edge(lene++,70,71));
+  edges.push(new Edge(lene++,71,72));
+  edges.push(new Edge(lene++,72,73));
+  edges.push(new Edge(lene++,74,73));
+  edges.push(new Edge(lene++,74,75));
+  edges.push(new Edge(lene++,75,76));
+
+//    随机产生num个顶点和一些边
+//  let num=200;
+//
+//  for (let i = 0; i < num; i++) {
+//    nodes.push(new Node(i,Math.random()*width,Math.random()*height));
+//  }
+//  for (let i = 0; i < num; i++) {
+//    let edgeCount = Math.random() * (i % 5) + 1;
+//    for (let j = 0; j < edgeCount; j++) {
+//      let targetId = Math.floor(Math.random() * num);
+//      let edge = new Edge(lene++, i, targetId);
+//      edges.push(edge);
+//    }
+//  }
+
+  
+  //通过原始数据构建四叉树
+  
+  let rect=new Rect(0+padding,width-padding,0+padding,height-padding);
+  let qtree;
+
+
+  
+  let MAX_DISPLACEMENT_SQUARED=5;
+  NE = edges.length;
+  N = nodes.length;
+  
+  //迭代300次
+  for(let m=0;m<300;m++){
+    
+
+    qtree=new QuadTree(rect,1);
+    for(let i=0;i<num;i++){
+
+      qtree.insert(nodes[i]);
+    }
+    for(let i=0;i<nodes.length;i++){
+      //console.log("i",nodes2[i].id);
+        qtree.calforce(nodes[i]);
+    }
+
+    
+    for(let i=0;i<NE;i++){
+      let node1=nodes[edges[i].source];
+      let node2=nodes[edges[i].target];
+      
+      let dx=node1.x-node2.x;
+      let dy=node1.y-node2.y;
+      if(dx!=0||dy!=0){
+        let distanceSquared=dx*dx+dy*dy;
+        let distance=Math.sqrt(distanceSquared);
+        let force=K_s*(distance-L);
+        let fx=force*dx/distance;
+        let fy=force*dy/distance;
+        node1.force_x-=fx;
+        node1.force_y-=fy;
+        node2.force_x+=fx;
+        node2.force_y+=fy;
+      }
+    }
+    
+    //alert("3");
+    for(let i=0;i<N;i++){
+      let node=nodes[i];
+      let dx=delta_t*node.force_x;
+      let dy=delta_t*node.force_y;
+      let displacementSquared=dx*dx+dy*dy;
+      if(displacementSquared>MAX_DISPLACEMENT_SQUARED){
+        let s=Math.sqrt(MAX_DISPLACEMENT_SQUARED/displacementSquared);
+        dx=dx*s;
+        dy=dy*s;
+      }
+      node.x+=dx;
+      node.y+=dy;
+      
+    }
+    for(let i=0;i<N;i++){
+      nodes[i].force_x=0;
+      nodes[i].force_y=0;
+    }
+  }
+
+  console.log(qtree);
+
+  let lines=[];
+  lines.push({x1:0+padding,y1:0+padding,x2:width-padding,y2:0+padding});
+  lines.push({x1:0+padding,y1:0+padding,x2:0+padding,y2:height-padding});
+  lines.push({x1:width-padding,y1:height-padding,x2:width-padding,y2:0+padding});
+  lines.push({x1:width-padding,y1:height-padding,x2:0+padding,y2:height-padding});
+  qtree.calline(lines);
+
+
+  let nodes2=[];
+  qtree.calnode(nodes2);
+console.log("nodes",nodes);
+console.log("nodes2",nodes2);
+console.log("edges",edges);
+
+  var svg = d3.select("body").append("svg")
+      .attr("width", width)
+      .attr("height", height);
+  
+  var link = svg.append("g")
+      .attr("class", "link")
+    .selectAll("line")
+    .data(lines)
+    .enter().append("line")
+      .attr("x1", function(d) { return d.x1; })
+      .attr("y1", function(d) { return d.y1; })
+      .attr("x2", function(d) { return d.x2; })
+      .attr("y2", function(d) { return d.y2; });
+  var link2 = svg.append("g")
+      .attr("class", "link")
+    .selectAll("line")
+    .data(edges)
+    .enter().append("line")
+      .attr("x1", function(d) { return nodes[d.source].x; })
+      .attr("y1", function(d) { return nodes[d.source].y; })
+      .attr("x2", function(d) { return nodes[d.target].x; })
+      .attr("y2", function(d) { return nodes[d.target].y; });
+  var node = svg.append("g")
+    .selectAll("circle")
+    .data(nodes)
+    .enter().append("circle")
+      .attr("class",function(d){
+        if((d.id)!=-1)
+          return "node"
+        else 
+          return "node2"
+      })
+      .attr("r", 5)
+      .attr("cx", function(d) { return d.x; })
+      .attr("cy", function(d) { return d.y; })
+      .on("dblclick", dblclick);
+    
+    function dblclick(d) {
+      d3.select(this).attr("class","fixed");//classed("fixed", d.fixed = false);
+        alert("shuang ji");
+    }
+</script>
+</html>

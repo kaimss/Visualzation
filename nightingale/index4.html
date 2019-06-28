@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>shapetest</title>
+        <script type="text/javascript" src="d3/d3.v3.js"></script>
+
+    </head>
+    <body>
+		<p>nihaoddd</p>
+		<script>
+			var w = 900,h = 900;
+    		var data = [
+				{city:"上海",number:25},{city:"北京",number:22},{city:"南京",number:19},
+				{city:"青岛",number:23},{city:"大连",number:5},{city:"南京",number:9},
+				{city:"南京",number:40},{city:"南京",number:33},{city:"南京",number:55},
+				{city:"南京",number:17},{city:"南京",number:59},{city:"南京",number:2},
+			];
+			
+			var len=data.length;
+            var Scale = d3.scale.linear()
+               .domain([0, d3.max(data, function(d) {return d.number; })])
+               .range([45, 450]);
+			
+			
+			var color = d3.scale.category10();   //有十种颜色的颜色比例尺
+			
+
+			
+    		var pie = d3.layout
+						.pie()
+						.value(function(d){
+							return d.number;
+						});
+
+			
+												
+			var piedata=pie(data);
+			
+    		var svg = d3.select("body")
+				.append("svg")
+				.attr("width",w)
+				.attr("height",h);
+			
+    		var arc = d3.svg.arc()
+				.outerRadius(function(d,i)
+				{
+					var num=d.data.number;
+					return Scale(num);
+				})
+				.innerRadius(0)
+			    .startAngle(function(d,i)
+				{
+					return parseInt(i)*2*Math.PI/len;
+				})
+			    .endAngle(function(d,i)
+						 {
+					return parseInt(i+1)*2*Math.PI/len;
+				});
+			//添加对应数组的弧组，即<g>元素
+			var arcs=svg.selectAll("g")
+			 			.data(piedata)
+						.enter()
+						.append("g")
+						.attr("transform","translate("+w/2+","+h/2+")");
+			
+
+		    //添加弧的路径元素
+    		arcs.append("path")
+				.attr("d",arc)
+				.attr("fill", function (d,i) {
+        			return color(i);
+    			});
+
+			//在每一个弧线中心添加文本
+        	arcs.append("text")
+        		.text(function(d){
+            		return d.data.city; 
+        		})
+        		.attr("transform",function(d,i){
+            		return "translate(" + arc.centroid(d,i) + ")";
+        		})//调成每个文字的对应位置
+        		.attr("text-anchor","middle")//是文字居中
+        		.attr("font-size",function(d,i){ return (i%3)*3 + 9; });		
+
+		</script>
+	</body>
+	
+</html>

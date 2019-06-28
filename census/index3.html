@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>census</title>
+		<style>
+		.axis path,
+		.axis line {
+   		 fill: none;
+   		 stroke: black;
+    	 shape-rendering: crispEdges;
+		}
+
+		.axis text {
+    		font-family: sans-serif;
+    		font-size: 11px;
+		}
+		</style>
+	</head>
+<body>
+<script src="d3.v3.js"></script>
+<script>
+
+
+	
+var width = 1200,height = 600;
+var pad = 10;
+var bigpad = 10;
+var svg = d3.select("body").append("svg").attr("width",width).attr("height",height);
+var margin = {top:50,left:80,right:80,bottom:50};
+
+//Sex  1--male  2--female
+//Year 1900  or 2000
+//Age  0--90+   interval 5
+//People
+d3.csv("census2000.csv", function (data) {
+	var p1900 = [];
+	var female1900 = [];
+	var male1900 = [];
+	var p2000 = [];
+	var female2000 = [];
+	var male2000 = [];
+	var progress = [];
+	var m = 18, n = 18;
+	
+	for(var i=0;i<data.length;i+=2)
+	{
+		p1900[i/2] = parseInt(data[i].People);
+		if(data[i].Sex == 1)
+			male1900[m--] = parseInt(data[i].People);
+		else
+			female1900[n--] = parseInt(data[i].People);
+	}
+	m = 18, n = 18;//每个组别的最后一个元素序号
+	for(var i=1;i<data.length;i+=2)
+	{
+		p2000[(i-1)/2] = parseInt(data[i].People);
+		if(data[i].Sex == 1)
+			male2000[m--] = parseInt(data[i].People);
+		else
+			female2000[n--] = parseInt(data[i].People);
+			
+	}
+	for(var i=0;i<p1900.length;i++)
+	{
+		progress[i]=p1900[i]+p2000[i];
+	}
+	
+//		var xAxis = d3.svg.axis()
+//				  	  .scale(xAScale)
+//                  	  .orient("bottom")
+//					  .ticks(2);
+//		var xvAxis = d3.svg.axis()
+//				  	  .scale(xVAScale)
+//                  	  .orient("bottom")
+//					  .ticks(2);
+//第一张图
+
+var xScale = d3.scale.linear().range([0,(width- 2*margin.left - 2*margin.right - 4 * pad)/4]).domain([0,d3.max(female2000)]);  
+var yScale = d3.scale.linear().range([0,(height- margin.top - margin.bottom)]).domain([0,female2000.length]);
+var xVScale = d3.scale.linear().range([(width- 2*margin.left - 2*margin.right - 4 * pad)/4,0]).domain([0,d3.max(female2000)]); 
+var xxScale =  d3.scale.linear().range([0,(width- 2*margin.left - 2*margin.right - 4 * pad)/4]).domain([0,d3.max(female2000)/10000]); 
+var xVScale = d3.scale.linear().range([(width- 2*margin.left - 2*margin.right - 4 * pad)/4,0]).domain([0,d3.max(female2000)/10000]); 
+var xAxis = d3.svg.axis().scale(xxScale).orient("bottom").ticks(5);
+var xVAxis = d3.svg.axis().scale(xVScale).orient("bottom").ticks(5);	
+	
+		var sum = 0;
+	    for(var i=0;i<female1900.length;i++)
+		{
+			sum += female1900[i];
+				
+		}
+	    for(var i=0;i<male1900.length;i++)
+		{
+			sum += male1900[i];
+				
+		}	
+	
+	
+
+	
+
+	
+	
+        bartext = svg.append("g")
+                     .attr("transform","translate("+ width/4 +"," + margin.top +")");
+        bartext.selectAll("text").data(female1900).enter()//添加年龄纵坐标文字
+                .append("text")
+                .attr("x", function (d) {
+					//console.log("x坐标 "+xScale(d)+10);
+                    return -5;
+                })
+                .attr("y", function (d, i) {
+                    return yScale(i)+20;
+                })
+				.attr("font-size",10)
+                .text(function (d,i) {
+                    return (95-(i+1)*5);
+                })
+				.attr("font-size",10)
+	
+	
+//1900女性
+        bar1 = svg.append("g")
+                .attr("transform","translate("+ width/4 +"," + margin.top +")");
+        bar1.selectAll("rect").data(female1900).enter()
+                .append("rect")
+                .attr("x", function (d) {
+					//console.log("1.x坐标 "+0);
+                    return pad;
+                })
+                .attr("y", function (d, i) {
+					//console.log("1.y坐标 "+yScale(i));
+                    return yScale(i);
+                })
+                .attr("width", function (d) {
+                    return xScale(d);
+                })
+                .attr("height", function () {
+                    return yScale(1)-1.2;
+                })
+                .attr("fill","#fdc6d9")
+				.on("mouseover",function(d,i){
+					d3.select(this)
+					  .attr("fill","red");
+				})
+				.on("mouseout",function(d,i){
+					d3.select(this)
+					  .attr("fill","#fdc6d9");
+				});
+//	bar1.transition()
+//    .duration(1000)
+//    .attr("fill", "red");
+        bar1.selectAll("text").data(female1900).enter()
+                .append("text")
+                .attr("x", function (d) {
+					//console.log("x坐标 "+xScale(d)+10);
+                    return xScale(d)+pad;
+                })
+                .attr("y", function (d, i) {
+                    return yScale(i)+20;
+                })
+                .text(function (d) {
+                    return Number(d/sum * 100).toFixed(2) + "%";
+                })	
+				.attr("font-size",15);
+	
+
+		bar1.append("g")
+    		.attr("class", "axis")  //Assign "axis" class
+			.attr("transform", "translate(" + (pad+0.5) + ", " + (height - margin.bottom - 50) + ")")
+    		.call(xAxis)
+	
+	
+//1900男性	
+
+        bar2 = svg.append("g")
+                .attr("transform","translate("+ width/4 +"," + margin.top +")");
+        bar2.selectAll("rect").data(male1900).enter()
+                .append("rect")
+                .attr("x", function (d) {
+					//console.log("2.x坐标 "+(0-xScale(d)));
+                    return 0-xScale(d)-pad;
+                })
+                .attr("y", function (d,i) {
+				//console.log("2.y坐标 "+yScale(i));
+                    return yScale(i);
+                })
+                .attr("width", function (d) {
+                    return xScale(d);
+                })
+                .attr("height", function () {
+                    return yScale(1)-1.2;
+                })
+                .attr("fill","#7693E4");
+        bar2.selectAll("text").data(male1900).enter()
+                .append("text")
+                .attr("x", function (d, i) {
+					//console.log(i+" x "+xScale(d));
+                    return (-40-xScale(d))-15;
+                })
+                .attr("y", function (d, i) {
+					//console.log(i+" y "+yScale(i)+20);
+                    return yScale(i)+20;
+                })
+                .text(function (d) {
+                    return Number(d/sum * 100).toFixed(2) + "%";
+                })
+				.attr("font-size",15)
+	
+
+
+
+		
+		bar2.append("g")
+    		.attr("class", "axis")  //Assign "axis" class
+    		.attr("transform", "translate(" + (80 - 0.5 - width/4) + ", " + (height - margin.bottom - 50) + ")")
+    		.call(xVAxis);	
+
+	
+	
+	
+//第二张图
+		sum = 0;
+	    for(var i=0;i<female2000.length;i++)
+		{
+			sum += female2000[i];
+				
+		}	
+	    for(var i=0;i<male2000.length;i++)
+		{
+			sum += male2000[i];
+				
+		}
+        bartext = svg.append("g")
+                     .attr("transform","translate("+ 3*width/4 +"," + margin.top +")");
+        bartext.selectAll("text").data(female2000).enter()
+                .append("text")
+                .attr("x", function (d) {
+					//console.log("x坐标 "+xScale(d)+10);
+                    return -5;
+                })
+                .attr("y", function (d, i) {
+                    return yScale(i)+20;
+                })
+                .text(function (d,i) {
+                    return (95-(i+1)*5);
+                })
+				.attr("font-size",10)
+	
+
+//2000女性
+        bar1 = svg.append("g")
+                //.attr("class","bar1")
+                .attr("transform","translate("+ 3*width/4 +"," + margin.top +")");
+        bar1.selectAll("rect").data(female2000).enter()
+                .append("rect")
+                .attr("x", function (d) {
+					//console.log("1.x坐标 "+0);
+                    return 0+pad;
+                })
+                .attr("y", function (d, i) {
+					//console.log("1.y坐标 "+yScale(i));
+                    return yScale(i);
+                })
+                .attr("width", function (d) {
+                    return xScale(d);
+                })
+                .attr("height", function () {
+                    return yScale(1)-1.2;
+                })
+                .attr("fill","#fdc6d9");
+        bar1.selectAll("text").data(female2000).enter()
+                .append("text")
+                .attr("x", function (d) {
+					//console.log("x坐标 "+xScale(d)+10);
+                    return xScale(d)+pad;
+                })
+                .attr("y", function (d, i) {
+                    return yScale(i)+20;
+                })
+                .text(function (d) {
+                    return Number(d/sum * 100).toFixed(2) + "%";
+                })	
+				.attr("font-size",15)
+		bar1.append("g")
+    		.attr("class", "axis")  //Assign "axis" class
+			.attr("transform", "translate(" + (pad+0.5) + ", " + (height - margin.bottom - 50) + ")")
+    		.call(xAxis)
+	
+//1900男性
+        bar2 = svg.append("g")
+                .attr("transform","translate("+ 3*width/4 +"," + margin.top +")");
+        bar2.selectAll("rect").data(male2000).enter()
+                .append("rect")
+                .attr("x", function (d) {
+					//console.log("2.x坐标 "+(0-xScale(d)));
+                    return 0-xScale(d)-pad;
+                })
+                .attr("y", function (d,i) {
+				//console.log("2.y坐标 "+yScale(i));
+                    return yScale(i);
+                })
+                .attr("width", function (d) {
+                    return xScale(d);
+                })
+                .attr("height", function () {
+                    return yScale(1)-1.2;
+                })
+                .attr("fill","#7693E4");
+        bar2.selectAll("text").data(male2000).enter()
+                .append("text")
+                .attr("x", function (d, i) {
+					//console.log(i+" x "+xScale(d));
+                    return (-40-xScale(d))-15;
+                })
+                .attr("y", function (d, i) {
+					//console.log(i+" y "+yScale(i)+20);
+                    return yScale(i)+20;
+                })
+                .text(function (d) {
+                    return Number(d/sum * 100).toFixed(2) + "%";
+                })
+				.attr("font-size",15)
+	
+		bar2.append("g")
+    		.attr("class", "axis")  //Assign "axis" class
+    		.attr("transform", "translate(" + (80 - 0.5 - width/4) + ", " + (height - margin.bottom - 50) + ")")
+    		.call(xVAxis);		
+	
+    });
+
+//添加一些说明内容
+    svg.append("text")
+            .attr("x",width/2-330)
+			.attr("y",40)
+			.text("Population Changes of the US in 1900 and 2000")
+			.attr("font-size",35);
+	
+	
+    d3.select("svg").append("text")
+            .attr("x",100)
+            .attr("y",100)
+            .text("1900")
+			.attr("font-size",30)
+    d3.select("svg").append("text")
+            .attr("x",100+width/2)
+            .attr("y",100)
+            .text("2000")
+			.attr("font-size",30)
+	
+	
+    d3.select("svg").append("rect")
+            .attr("x",width/2-80)
+            .attr("y",70)
+            .attr("width",20)
+            .attr("height",20)
+            .attr("fill","#fdc6d9");
+    d3.select("svg").append("text")
+            .attr("x",width/2-80+25)
+            .attr("y",85)
+            .text("female");
+    d3.select("svg").append("rect")
+            .attr("x",width/2-80)
+            .attr("y",100)
+            .attr("width",20)
+            .attr("height",20)
+            .attr("fill","#7693E4")
+    d3.select("svg").append("text")
+            .attr("x",width/2-80+25)
+            .attr("y",115)
+            .text("male");
+	
+    d3.select("svg").append("text")
+            .attr("x",width-75)
+            .attr("y",height-40)
+            .text("人口/万人")
+			.attr("font-size",12);	
+    d3.select("svg").append("text")
+            .attr("x",width/2+20)
+            .attr("y",height-40)
+            .text("人口/万人")
+			.attr("font-size",12);	
+    d3.select("svg").append("text")
+            .attr("x",width/2-80)
+            .attr("y",height-40)
+            .text("人口/万人")
+			.attr("font-size",12);	
+    d3.select("svg").append("text")
+            .attr("x",20)
+            .attr("y",height-40)
+            .text("人口/万人")
+			.attr("font-size",12);
+</script>
+</body>
+</html>

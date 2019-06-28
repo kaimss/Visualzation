@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>D3 Test</title>
+
+</head>
+<body>
+<script src="d3.v3.js"></script>
+<script>
+var width = 960,height = 500;
+var svg = d3.select("body").append("svg").attr("width",width).attr("height",height);
+var margin = {top:50,left:60,right:60,bottom:50};
+var xScale = d3.scale.linear().range([0,(width- margin.left - margin.right)/2]);    //X轴和Y轴
+var yScale = d3.scale.ordinal().rangeRoundBands([0,height - margin.top - margin.bottom],0.1);   //
+ 
+d3.csv("today.csv", function (data) {
+        //data.sort(function(a,b){ return d3.descending(parseInt(a.value),parseInt(b.value))}); //对加载的数据排序
+        xScale.domain([0,d3.max(data, function (d) {
+            return parseFloat(d.value);
+        })]);
+        yScale.domain(data.map(function(d){return d.name}));
+        bar1 = svg.append("g")
+                //.attr("class","bar1")
+                .attr("transform","translate("+ width/2 +"," + margin.top +")");
+        bar1.selectAll("rect").data(data).enter()
+                .append("rect")
+                .attr("x", function (d) {
+                    return 0;
+                })
+                .attr("y", function (d) {
+                    return yScale(d.name);
+                })
+                .attr("width", function (d) {
+                    return xScale(d.value);
+                })
+                .attr("height", function () {
+                    return yScale.rangeBand();
+                })
+                .attr("fill","#fdc6d9");
+        bar1.selectAll("text").data(data).enter()
+                .append("text")
+                .attr("x", function (d) {
+					//console.log(d.value);
+					//console.log(xScale(parseFloat(d.value)));
+                    return xScale(parseFloat(d.value));
+                })
+                .attr("y", function (d) {
+                    return yScale(d.name)+yScale.rangeBand();
+                })
+                .text(function (d) {
+                    return d.name + d.value;
+                })
+    });
+    d3.csv("yesterday.csv", function (data) {
+		//console.log(data);
+        //data.sort(function(a,b){ return d3.descending(parseInt(a.value),parseInt(b.value))});
+        xScale.domain([0,d3.max(data, function (d) {
+            return parseFloat(d.value);
+        })]);
+        yScale.domain(data.map(function(d){return d.name}));
+        bar2 = svg.append("g")
+                //.attr("class","bar1")
+                .attr("transform","translate("+ width/2 +"," + margin.top +")");
+        bar2.selectAll("rect").data(data).enter()
+                .append("rect")
+                .attr("x", function (d) {
+					//console.log(d.value);
+					//console.log(xScale(parseFloat(d.value)));
+                    return 0-xScale(parseFloat(d.value));
+                })
+                .attr("y", function (d) {
+                    return yScale(d.name);
+                })
+                .attr("width", function (d) {
+                    return xScale(d.value);
+                })
+                .attr("height", function () {
+                    return yScale.rangeBand();
+                })
+                .attr("fill","#7693E4");
+        bar2.selectAll("text").data(data).enter()
+                .append("text")
+                .attr("x", function (d) {
+                    return (-40-xScale(parseFloat(d.value)));
+                })
+                .attr("y", function (d) {
+                    return (parseFloat(yScale(d.name)) + parseFloat(yScale.rangeBand()));
+                })
+                .text(function (d) {
+                    return d.name + d.value;
+                })
+    });
+    svg.append("text")
+            .attr("class","title")
+            .attr("x",450).attr("y",40).text("某公司.");
+//添加一些修饰性内容
+    d3.select("svg").append("rect")
+            .attr("x",740)
+            .attr("y",354)
+            .attr("width","10")
+            .attr("height",10)
+            .attr("fill","#fdc6d9");
+    d3.select("svg").append("text")
+            .attr("class","mark")
+            .attr("x",755)
+            .attr("y",364)
+            .text("昨天");
+    d3.select("svg").append("rect")
+            .attr("x",740)
+            .attr("y",369)
+            .attr("width","10")
+            .attr("height",10)
+            .attr("fill","#7693E4")
+    d3.select("svg").append("text")
+            .attr("class","mark")
+            .attr("x",755)
+            .attr("y",379)
+            .text("今天");
+</script>
+</body>
+</html>

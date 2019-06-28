@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>parallel coordinates</title>
+		<script src="d3/d3.v3.js"></script>
+        <script src="d3/d3.parcoords.js"></script>
+        <!--<script src="http://d3js.org/d3.v3.min.js"></script>-->
+
+        <link rel="stylesheet" type="text/css" href="css/d3.parcoords.css">
+    </head>
+    <body>
+		<div id="vis" style="width:2500px;height:800px"></div>
+
+        <script>
+			
+			
+
+
+
+//d3.csv("../parallel coordinates/nutrients.csv", function(error, csv) {
+//	console.log(csv);
+//	var parcoords = d3.parcoords()("#vis")
+//    .data(csv)
+//    .hideAxis(["name"])
+//    .alpha(0.25)
+//    .composite("darken")
+//    .margin({ top: 24, left: 150, bottom: 12, right: 0 })
+//    .mode("queue")
+//    .render()
+//    .brushMode("1D-axes");  // enable brushing
+//	
+//});
+
+
+// load csv file and create the chart
+d3.csv('../parallel coordinates/nutrients.csv', function(data) {
+  var colorgen = d3.scale.ordinal()
+    .range(["#a6cee3","#1f78b4","#b2df8a","#33a02c",
+            "#fb9a99","#e31a1c","#fdbf6f","#ff7f00",
+            "#cab2d6","#6a3d9a","#ffff99","#b15928"]);
+
+  var color = function(d) { return colorgen(d.group); };//原始代码这里为colors(d.group)
+
+  var parcoords = d3.parcoords()("#vis")
+    .data(data)
+    .hideAxis(["name"])
+    .color(color)
+    .alpha(0.25)
+    .composite("darken")
+    .margin({ top: 24, left: 150, bottom: 12, right: 0 })
+    .mode("queue")
+    .render()
+    .brushMode("1D-axes");  // enable brushing
+
+  parcoords.svg.selectAll("text")
+    .style("font", "10px sans-serif");
+});
+		</script>
+    </body>
+</html> 
+
+
+
+
+

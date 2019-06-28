@@ -1,0 +1,151 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>无标题文档</title>
+<script type="text/javascript" src="d3/d3.v3.js"></script>
+</head>
+
+<body>
+	<script>
+		console.log("test1");
+		
+		d3.csv("nightingale.csv",function(error,data){
+		
+			if(error){
+				console.log("error");
+			}
+			console.log(data);
+    var totalRadius = [];
+    var maxRADIUS;			
+	//需要求出三种数据类型的均值和方差
+    var WOUNDS = [];
+    var OTHERS = [];
+    var DISEASE = [];
+    for(var i=0;i<data.length;i++){
+        if(data[i].Type == "Wounds")
+            WOUNDS.push(parseInt(data[i].Death));
+        else if(data[i].Type == "Disease")
+            DISEASE.push(parseInt(data[i].Death));
+        else if(data[i].Type == "Other")
+            OTHERS.push(parseInt(data[i].Death));
+    }
+    var meanWOUNDS = d3.mean(WOUNDS);
+    var varWOUNDS = d3.deviation(WOUNDS);
+    var meanOTHERS = d3.mean(OTHERS);
+    var varOTHERS = d3.deviation(OTHERS);
+    var meanDISEASE = d3.mean(DISEASE);
+    var varDISEASE = d3.deviation(DISEASE);
+
+    var radiusOthers = 0;
+    var radiusWound = 0;
+    var months; //月份
+    var types;  //类型
+    var deaths; //死亡人数
+    var radius; //计算半径
+    scale = 2;//120
+
+			
+			var woundscale=d3.scale.linear()
+							 .domain([d3.min(WOUNDS),d3.max(WOUNDS)])
+							 .range([10,50]);
+			var otherscale=d3.scale.linear()
+							 .domain([d3.min(OTHERS),d3.max(OTHERS)])
+							 .range([10,50]);
+			var diseasescale=d3.scale.linear()
+							 .domain([d3.min(DISEASE),d3.max(DISEASE)])
+							 .range([10,80]);			
+			
+            var color = ['#00c78c', '#ffc0cb', '#33a1c9'];
+			
+    		var pie = d3.layout
+						.pie()
+						.value(function(d){
+							return d.Death;
+						});
+			var w = 800,h = 800;
+			var piedata=pie(data);
+			var svg = d3.select("body")
+				.append("svg")
+				.attr("width",w)
+				.attr("height",h);
+
+
+
+			var radiusOthers = 0;
+            var radiusWound = 0;
+    		var arc = d3.svg.arc()
+        				.innerRadius(function(d,i){
+							if(d.data.Type == "Other")
+                				return 0;
+            				else if(d.data.Type == "Wounds")
+                				return radiusOthers;
+            				else if(d.data.Type == "Disease")
+                				return radiusOthers + radiusWound;
+        				})
+        				.outerRadius(function(d,i){
+            				types = d.data.Type;
+            				deaths = parseInt(d.data.Death);
+            				if(types == "Other"){
+                				//类型为Other
+                				radius = otherscale(deaths)*scale;
+                				radiusOthers = radius;
+            				}
+            				else if(types == "Wounds"){
+                				//类型为Wounds
+                				radius = woundscale(deaths)*scale;
+                				radiusWound = radius;
+                				radius = radius + radiusOthers;
+            				}
+            				else if(types == "Disease"){
+                				//类型为Disease
+                				radius = diseasescale(deaths)*scale;
+                				radius = radius + radiusOthers + radiusWound;
+            				}
+            				totalRadius.push(radius);
+            				return radius;
+        				})
+        				.startAngle(function(d,i){
+            				return parseInt(i/3)*2*Math.PI/12;
+        				})
+        				.endAngle(function(d,i){
+            				return (parseInt(i/3)+1)*2*Math.PI/12;
+        				});
+			//添加对应数组的弧组，即<g>元素
+			var arcs=svg.selectAll("g")
+			 			.data(piedata)
+						.enter()
+						.append("g")
+						.attr("transform","translate("+w/2+","+h/2+")");
+			
+
+    arcs.append('path')
+        .attr('d',arc)
+        .attr('fill',function(d,i){
+            return color[parseInt(i%3)];
+        })
+        .attr('stroke','white');    //添加描边
+
+
+    arcs.append("text")
+        .text(function(d){
+            return d.data.Death; 
+        })
+        .attr("transform",function(d,i){
+            return "translate(" + arc.centroid(d,i) + ")";
+        })//调成每个文字的对应位置
+        .attr("text-anchor","middle")//是文字居中
+        .attr("font-size",function(d,i){ return (i%3)*3 + 9; });
+			
+			
+			
+			
+			
+			
+			
+			
+		});
+	</script>
+
+</body>
+</html>

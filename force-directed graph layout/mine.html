@@ -1,0 +1,287 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>无标题文档</title>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<style>
+.link {
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+
+.node {
+  cursor: move;
+  fill: #ccc;
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+
+.node.fixed {
+  fill: #f00;
+}
+</style>
+</head>
+
+<body>
+<script>
+    
+function Node(id = null, x = null, y = null) {
+  this.id = id;
+  this.x = x;
+  this.y = y;
+  this.force_x=0;
+  this.force_y=0;
+}
+function Edge(id = null, source = null, target = null) {
+  this.id = id;
+  this.source = source;
+  this.target = target;
+}
+function Result(nodes = null, links = null) {
+  this.nodes = nodes;
+  this.links = links;
+}
+  let width=900;
+  let height=500;
+  
+  let nodes = [];
+  let edges = [];
+  let num=200;
+  let lenn=0,lene=0;
+  
+  for (let i = 0; i < num; i++) {
+    nodes.push(new Node(i,Math.random()*width,Math.random()*height));
+  }
+  
+  for(let i=0;i<16;i++){
+    edges.push(new Edge(lene++,70,i));
+  }
+  
+  for(let i=16;i<48;i++){
+    edges.push(new Edge(lene++,71,i));
+  }
+  for(let i=48;i<70;i++){
+    edges.push(new Edge(lene++,72,i));
+  }
+  for(let i=77;i<100;i++){
+    edges.push(new Edge(lene++,73,i));
+  }
+  for(let i=100;i<120;i++){
+    edges.push(new Edge(lene++,74,i));
+  }
+  for(let i=120;i<150;i++){
+    edges.push(new Edge(lene++,75,i));
+  }
+  for(let i=150;i<190;i++){
+    edges.push(new Edge(lene++,76,i));
+  }
+  edges.push(new Edge(lene++,70,71));
+  edges.push(new Edge(lene++,71,72));
+  edges.push(new Edge(lene++,72,73));
+  edges.push(new Edge(lene++,74,73));
+  edges.push(new Edge(lene++,74,75));
+  edges.push(new Edge(lene++,75,76));
+//  for(let i=0;i<15;i++){
+//    for(let j=i+1;j<16;j++){
+//      edges.push(new Edge(lene++,i,j));
+//    }
+//  }
+//  for(let i=16;i<31;i++){
+//    for(let j=i+1;j<32;j++){
+//      edges.push(new Edge(lene++,i,j));
+//    }
+//  }
+//  for(let i=32;i<47;i++){
+//    for(let j=i+1;j<48;j++){
+//      edges.push(new Edge(lene++,i,j));
+//    }
+//  }
+//  for(let i=48;i<79;i++){
+//    for(let j=i+1;j<80;j++){
+//      edges.push(new Edge(lene++,i,j));
+//    }
+//  }
+//  edges.push(new Edge(lene++,13,18));
+//  edges.push(new Edge(lene++,19,36));
+//  edges.push(new Edge(lene++,40,78));
+  //随机产生20个顶点和一些边
+//  for (let i = 0; i < num; i++) {
+//    nodes.push(new Node(i,Math.random()*width,Math.random()*height));
+//  }
+//
+//  for (let i = 0; i < num; i++) {
+//    let edgeCount = Math.random() * (i % 5) + 1;
+//    for (let j = 0; j < edgeCount; j++) {
+//      let targetId = Math.floor(Math.random() * num);
+//      let edge = new Edge(lene++, i, targetId);
+//      edges.push(edge);
+//    }
+//  }
+  
+  
+ 
+  console.log(nodes);
+  console.log(edges);
+  
+  L = 20;
+  K_r = 10000;
+  K_s = 1;
+  delta_t = 2;
+  
+  N = nodes.length;
+  NE = edges.length;
+
+  
+//  let node1={};
+//  let node2={};
+//  let node={};
+//  let dx,dy,fx,fy;
+//  let distance,distanceSquared;
+//  let force;
+//  let displacementSquared;
+update();
+function update(){
+  
+  console.log(nodes);
+  console.log(edges);
+  let MAX_DISPLACEMENT_SQUARED=5;
+  
+  for(let t=0;t<200;t++){
+    //alert("1");
+    for(let i1=0;i1<N-1;i1++){
+      let node1=nodes[i1];
+      for(let i2=i1+1;i2<N;i2++){
+        let node2=nodes[i2];
+        let dx=node1.x-node2.x;
+        let dy=node1.y-node2.y;
+        if(dx!=0||dy!=0){
+          let distanceSquared=dx*dx+dy*dy;
+          let distance=Math.sqrt(distanceSquared);
+          let force=K_r/distanceSquared;
+          let fx=force*dx/distance;
+          let fy=force*dy/distance;
+          node1.force_x+=fx;
+          node1.force_y+=fy;
+          node2.force_x-=fx;
+          node2.force_y-=fy;
+        }
+
+      }
+    }
+    
+    //alert("2");
+    for(let i=0;i<NE;i++){
+      if(t==190&&i==1)
+        console.log(nodes[edges[i].source])
+      let node1=nodes[edges[i].source];
+      let node2=nodes[edges[i].target];
+
+      let dx=node1.x-node2.x;
+      let dy=node1.y-node2.y;
+   
+
+      if(dx!=0||dy!=0){
+        let distanceSquared=dx*dx+dy*dy;
+        let distance=Math.sqrt(distanceSquared);
+        let force=K_s*(distance-L);
+        let fx=force*dx/distance;
+        let fy=force*dy/distance;
+        node1.force_x-=fx;
+        node1.force_y-=fy;
+        node2.force_x+=fx;
+        node2.force_y+=fy;
+      }
+    }
+    
+    //alert("3");
+    for(let i=0;i<N;i++){
+      let node=nodes[i];
+      let dx=delta_t*node.force_x;
+      let dy=delta_t*node.force_y;
+      let displacementSquared=dx*dx+dy*dy;
+      if(displacementSquared>MAX_DISPLACEMENT_SQUARED){
+        let s=Math.sqrt(MAX_DISPLACEMENT_SQUARED/displacementSquared);
+        dx=dx*s;
+        dy=dy*s;
+      }
+      node.x+=dx;
+      node.y+=dy;
+      
+    }
+    for(let i=0;i<N;i++){
+      nodes[i].force_x=0;
+      nodes[i].force_y=0;
+    }
+  }
+
+} 
+  var graph = new Result(nodes, edges);
+  //var graph = JSON.parse(JSON.stringify(new Result(mNodeList, mEdgeList)));
+  //console.log("graph",graph.nodes);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+
+
+  graph.links.forEach(function(d) {
+    d.source = graph.nodes[d.source];
+    d.target = graph.nodes[d.target];
+  });
+
+//    const link = svg.append("g")
+//      .attr("stroke", "#999")
+//      .attr("stroke-opacity", 0.6)
+//    .selectAll("line")
+//    .data(links)
+//    .join("line")
+//      .attr("stroke-width", d => Math.sqrt(d.value));
+  
+  
+  var link = svg.append("g")
+      .attr("class", "link")
+    .selectAll("line")
+    .data(graph.links)
+    .enter().append("line")
+      .attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+//    .data(graph.nodes)
+//    .enter().append("circle")
+//      .attr("r", 8)
+//      .attr("cx", function(d) { return d.x; })
+//      .attr("cy", function(d) { return d.y; })
+
+  var node = svg.append("g")
+      .attr("class", "node")
+    .selectAll("circle")
+    .data(graph.nodes)
+    .enter().append("circle")
+      .attr("r", 8)
+      .attr("cx", function(d) { return d.x; })
+      .attr("cy", function(d) { return d.y; })
+      //.call(d3.drag().on("drag", dragged));
+      .on("dblclick", dblclick)
+      .call(d3.behavior.drag().on("drag",dragged));
+    
+    function dblclick(d) {
+      d3.select(this).attr("class","fixed");//classed("fixed", d.fixed = false);
+        alert("shuang ji");
+    }
+  function dragged(d,i) {
+      //d3.select(this).classed("fixed", d.fixed = true);
+    d.x = d3.event.x, d.y = d3.event.y;
+    nodes[i].x=d.x;nodes[i].y=d.y;
+    console.log("i",i)
+    d3.select(this).attr("cx", d.x).attr("cy", d.y);
+    link.filter(function(l) { return l.source === d; }).attr("x1", d.x).attr("y1", d.y);
+    link.filter(function(l) { return l.target === d; }).attr("x2", d.x).attr("y2", d.y);
+    update();
+  }
+ 
+</script>
+</body>
+</html>

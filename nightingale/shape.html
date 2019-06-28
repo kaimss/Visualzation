@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>shape</title>
+        <script type="text/javascript" src="d3/d3.v3.js"></script>
+
+    </head>
+    <body>
+		<p>nihaoddd</p>
+		<script>
+			var w = 300,h = 300;
+    		var data = [1,2,3,4,5];
+			var color = d3.scale.category10();   //有十种颜色的颜色比例尺
+    		var pie = d3.layout.pie();
+    		var svg = d3.select("body")
+				.append("svg")
+				.attr("width",w)
+				.attr("height",h);
+			
+    		var arc = d3.svg.arc()
+				.outerRadius([w/2])
+				.innerRadius([0]);   //注意的地方是必须要加上内部半径，否则后来算不出扇形的中心位置
+			
+    		arcs = svg.selectAll("g")
+				.data(pie(data))
+				.enter()
+				.append("g")
+				.attr("transform","translate("+w/2 +","+h/2+")");
+			
+    		arcs.append("path")
+				.attr("d",arc)
+				.attr("fill", function (d,i) {
+        			return color(i);
+    			});
+			
+    		arcs.append("text")
+				.attr("transform", function (d) {
+					console.log(d);
+        			return "translate("+arc.centroid(d)+")";
+    			}).attr("text-anchor","start").text(function (d) {
+        			return d.value;
+    			})
+		
+
+			
+
+		</script>
+	</body>
+	
+</html>
