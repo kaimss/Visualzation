@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>无标题文档</title>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+</head>
+
+<body>
+<button id="add">+</button>
+  <input></input>
+</body>
+<script>
+var items = [
+  { name: 'Edward', value: 21 },
+  { name: 'Sharpe', value: 37 },
+  { name: 'And', value: 45 },
+  { name: 'The', value: -12 },
+  { name: 'Magnetic' },
+  { name: 'Zeros', value: 37 }
+];
+
+// sort by value
+//items.sort(function (a, b) {
+//  return (a.value - b.value)
+//});
+items.sort((a, b) => a.value - b.value); 
+console.log("items",items);
+//
+var p1=[
+  {x:100,y:100},
+  {x:200,y:200},
+  {x:300,y:300},
+];
+var p2=[
+  {x:150,y:100},
+  {x:350,y:300},
+  {x:450,y:400},
+  {x:550,y:500},
+  {x:600,y:500}
+];
+
+var p=p1;
+var width = 960,
+    height = 800;
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+//var circle = svg.selectAll("circle");
+//var update = circle;
+//var enter = update.enter();
+//var exit = update.exit();
+//var circle = svg.selectAll("circle")
+//    .data(p)
+//    .enter()
+//    .append("circle")
+//    .attr("cx",function(d){return d.x;})
+//    .attr("cy",function(d){return d.y;})
+//    .attr("r",15)
+//    .style("fill","green");
+var circle;
+
+var t=-2;
+draw();
+
+function draw(){
+
+  console.log("p",p)
+
+
+  
+  if(typeof(circle) != "undefined"){
+      
+//      circle.each(function(d,i){//更新数据
+//        if (d.x == 400){
+//          d3.select(this).remove();
+//        }
+//        else 
+//          d.x+=50;
+//        console.log(d);
+//      });
+      circle.data(p).transition()//现有数据的动画
+          .duration(1000)
+          .ease("linear")
+          .attr("cx",function(d){return d.x;})
+          .attr("cy",function(d){return d.y;});
+    
+    console.log("  ")
+      circle.each(function(d,i){//删除指定数据
+        if (d.x == 400){
+          d3.select(this).remove();
+          p.splice(i,1);
+        }
+          console.log(d);
+        
+      });
+     // p.push({x:100,y:100+t*50})
+  }
+  
+  circle = svg.selectAll("circle").data(p);//重新添加数据
+  circle.enter()
+      .append("circle")
+      .transition()
+      .duration(1000)
+      .attr("cx",function(d){return d.x;})
+      .attr("cy",function(d){return d.y;})
+      .attr("r",15);
+
+}
+
+d3.select("#add").on("click",function(){
+      t+=1;
+  p.push({x:100,y:100+t*10});
+      draw();
+    });
+
+//在2秒（2000毫秒）内将圆心坐标由100变为300
+//将颜色从绿色变为红色
+//将半径从45变成25
+//过渡方式采用bounce（在终点处弹跳几次）
+//circle3.transition()
+//    .duration(2000)
+//    .ease("linear")
+//    .attr("cx",function(d){return d.x;})
+//    .attr("cy",function(d){return d.y;})
+//    //.attr("r", 25)
+//    .style("fill","red");
+//var exp =[]; 
+//console.log(exp);
+//if (exp.length!=0) 
+//{ 
+//alert("not null"); 
+//}　
+//else{
+//alert("is null"); 
+//}
+</script>
+</html>

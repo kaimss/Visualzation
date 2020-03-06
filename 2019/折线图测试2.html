@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>无标题文档</title>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script> 
+</head>
+
+<body>
+</body>
+    <script>
+    //定义画布
+    var width=400;
+    var height=400;
+
+    var svg=d3.select("body")
+              .append("svg")
+              .attr("width",width)
+              .attr("height",height);
+    //定义内边距
+    var padding={left:20,right:20,top:10,bottom:10};
+    
+    //数据
+    var dataset=[11,35,23,78,55,18,98,100,22,65]
+    //定义比例尺
+    var xscale=d3.scale.linear()
+                 .domain([0,dataset.length-1])
+                 .range([0,width-padding.left-padding.right])
+    var yscale=d3.scale.linear()
+                 .domain([0,d3.max(dataset)])
+                 .range([height-padding.top-padding.bottom,0])
+    //绘制坐标轴
+    var xAxis=d3.svg.axis()
+                .scale(xscale)
+                .orient("bottom")
+    var yAxis=d3.svg.axis()
+                .scale(yscale)
+                .orient("left")
+    d3.select("svg")
+     .append("g")
+     .attr("transform","translate(" + padding.left + "," + (height - padding.bottom) + ")")
+     .call(xAxis)
+     .attr("class","axis")
+     
+    d3.select("svg")
+     .append("g")
+     .attr("transform","translate("+padding.left+","+padding.top+")")
+     .call(yAxis)
+     .attr("class","axis")
+
+    
+    //绘制图形
+    var line_generator=d3.svg.line()
+                         .x(function(d,i){
+                             return xscale(i)//x轴的点用数据下标表示
+                         })
+                         .y(function(d){
+                             return yscale(d)
+                         })
+                         .interpolate("linear")
+    var g=svg.append("g")
+            .attr("transform","translate("+padding.left+","+padding.top+")")
+
+    
+    g.append("path")
+      .attr("d",line_generator(dataset))
+      .attr('stroke', 'black')
+      .attr('stroke-width', 1)
+      .attr("fill","none")
+    </script>
+</html>

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>census</title>
+<script src="js/d3.v3.min.js"></script>
+<script src="js/d3-queue.v3.min.js"></script>
+<script src="js/jquery-3.3.1.min.js"></script>
+<link href="css/common.css" rel="stylesheet">
+<!--
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="https://d3js.org/d3-queue.v3.min.js"></script>
+-->
+</head>
+<style>
+.show{
+    position:absolute;
+    z-index: 10;
+    color:#7E31A0;
+    visibility: :hidden;
+    font-size: 12px;
+    font-weight: bold;
+}
+.but{
+  width:600px;
+  height:60px;
+
+}
+.but button{
+  width:100px;
+  height:100px;
+}
+</style>
+
+<body>
+<div class=".but">
+<button id="add">+</button>
+<button id="sub">-</button>
+<select id="day" onchange="gradeDay()">
+  <option value="1">day1</option>
+  <option value="2">day2</option>
+  <option value="2">day3</option>
+</select>
+<select id="floor" onchange="gradeFloor()">
+  <option value="1">floor1</option>
+  <option value="2">floor2</option>
+</select>
+</div>
+	<div style="display: block; margin: 10px auto; width: 924px;">
+		<input type="range" id="slider" name="slider" class="ne-range"/>
+	</div>
+<svg width="1000" height="600">
+<image  xlink:href="img/first.jpg" width="1000" height="600"/>
+</svg>
+<script type="text/javascript">
+
+
+  
+
+  
+  
+
+//分钟数转时分
+function formatMinutes(strs) {
+  let str=parseInt(strs);
+  return ((Math.floor(str / 60)).toString().length < 2 ? "0" + (Math.floor(str / 60)).toString() : 
+  (Math.floor(str / 60)).toString()) + ":" + ((str % 60).toString().length < 2 ? "0" + (str % 60).toString() : (str % 60).toString());
+
+}    
+
+//秒数转时分秒
+function formatSeconds(strs) {
+  let str=parseInt(strs);
+  let h = Math.floor(str / 3600) < 10 ? '0'+Math.floor(str / 3600) : Math.floor(str / 3600);
+  let m = Math.floor((str / 60 % 60)) < 10 ? '0' + Math.floor((str / 60 % 60)) : Math.floor((str / 60 % 60));
+  let s = Math.floor((str % 60)) < 10 ? '0' + Math.floor((str % 60)) : Math.floor((str % 60));
+  return h + ":" + m + ":" + s;
+}     
+//通过sid返回楼层及坐标
+function coordinate(sid){
+  sid=parseInt(sid);
+  let floor=parseInt(sid/10000);
+  let x=parseInt((sid-floor*10000)/100);
+  let y=parseInt((sid-floor*10000-x*100));
+  let temp={floor:floor,x:x,y:y};
+  return temp;
+}   
+
+  
+  var tp=[];
+  var tpbefore=[];
+  var orientatin=true;//时间向前流动
+  var sortbystarttime=[];
+//通过person人员数组计算在t时刻floor楼层的人并返回
+function numwhent(t,floor){
+  let p=[];
+  for(let i=0;i<person.length;i++){
+
+    let len=person[i].length;
+    if(len==0)//此位置未使用
+      continue;
+    if(person[i][0].time>t||person[i][len-1].time+10<t)//对应id的人当前时刻未入场或已经离场
+      continue;
+    
+    
+    for(let j=0;j<len;j++){
+      //console.log(t+"  "+person[i][j].time);
+      if(t>=person[i][j].time&&t<=person[i][j].endtime){
+
+        if(coordinate(person[i][j].sid).floor==floor){
+          let tperson={};
+          tperson.id=person[i][j].id;
+          tperson.sid=person[i][j].sid;
+          tperson.time=person[i][j].time;
+          tperson.endtime=person[i][j].endtime;
+          tperson.admissiontime=person[i][0].time;
+          
+          let flag=true;
+          for(let m=j;m<len;m++){
+            if(coordinate(person[i][m].sid).floor!=floor){
+              tperson.departuretime=person[i][m].time;
+              flag=false;
+              break;
+            }
+          }
+          if(flag){
+            tperson.departuretime=person[i][len-1].time+10;
+          }
+          
+          p.push(tperson);
+          
+        }
+          
+        break;
+      }
+    }
+  }
+  p.sort((a, b) => a.admissiontime - b.admissiontime); 
+  //console.log("p",p);
+  return p;
+}
+
+
+
+
+  var tday=1,tfloor=1;//初始天数和初始楼层
+  var locations = [];//用以储存感应器数据
+  var day = [];//原始的当前选中天数数据
+  var people;//用于产生动画的画布
+  var person = [];//经处理后的当前天数当前楼层人员数组
+  for(let i=0;i<10000;i++){
+     person[i]=new Array();
+  }
+
+
+  var t=25239;//起始时间
+  //var timer;//计时器
+  var flag = true;//停止或开始
+
+
+
+  var tooltip = d3.select('body')
+                .append('div')
+                .attr("class","show")
+                .text('');//鼠标悬停在点上显示对应的信息
+
+
+
+  var q = d3.queue();//用于同时读取多个csv文件
+  q.defer(d3.csv, "location.csv")
+  .defer(d3.csv, 'log/day1.csv')
+  .defer(d3.csv, 'log/day2.csv')
+  .defer(d3.csv, 'log/day3.csv')
+  .await(processData);
+    
+
+  var w = 1000, h = 600;
+  var svg=d3.select("svg");
+  var g = svg.append("g");
+
+  var padding = {left: 80, right: 90, top: 62, bottom: 105};//调参调参！！！！！！！！
+
+  var xScale = d3.scale.linear()
+                 .domain([0, 30])
+                 .range([padding.left, w - padding.right]);			
+  var yScale = d3.scale.linear()
+                 .domain([0, 16])
+                 .range([padding.top, h - padding.bottom]);
+//主处理函数，目前只处理了第一天   	   
+function processData(error, data0, data1, data2, data3) {
+
+    locations=data0;
+    var days=[data1,data2,data3];
+
+    init();
+    draw(0); 
+  
+function init(){    
+    day=days[tday-1];
+    console.log("tday",tday);
+    console.log("day",day);
+  
+    //将读到的人员信息添加到全局变量数组person中
+    for(let i=0;i<day.length;i++){
+        let temp={};
+        temp.id=parseInt(day[i].id);
+        temp.sid=parseInt(day[i].sid);
+        temp.time=parseInt(day[i].time);
+        person[temp.id-10000].push(temp);
+        
+    }
+    
+    //上一步对于每一个人只添加了开始时间，不方便找结束时间，下面对每一个人每一个时间段进行结束时间的添加
+    
+    for(let i=0;i<person.length;i++){
+        let temp={};
+        
+        let len=person[i].length;
+        if(len==0)//此位置未使用
+            continue;
+        
+        //对id=i+10000的人的所有时间段进行扫描，将后一个时间段的起始时间作为前一个时间段的结束时间并更新至person数组中
+        for(let j=1;j<len;j++){
+            person[i][j-1].endtime=person[i][j].time-1;
+        }
+        person[i][len-1].endtime=person[i][len-1].time+10;
+        
+    }
+    console.log("person in ini",person);
+}
+    
+    
+  
+//绘制函数
+function draw(now){
+  svg.selectAll("text").remove();
+  svg.selectAll("g").remove();
+
+  tpbefore=numwhent(now,1);//t时刻第一层楼的人员数组
+  
+
+  console.log("tpbefore",tpbefore);
+
+  g = svg.append("g");
+
+  g.selectAll("circle")
+      .data(tpbefore)
+      .enter()
+      .append("circle")			
+      .attr("cx", function(d) {
+
+          return xScale(coordinate(d.sid).y+Math.random(1));
+      })
+      .attr("cy", function(d) {
+          return yScale(coordinate(d.sid).x+Math.random(1));
+      })
+      .attr("r", 3)
+      .attr("fill","green")
+      .on("mouseover",function(d,i){
+          d3.select(this)
+              .attr("fill","yellow");
+
+          tooltip.style('visibility', 'visible').text("id:"+d.id+"   coordinate("+coordinate(d.sid).x+","+coordinate(d.sid).y+")");
+      })
+      .on("mousemove",function(d,i){
+          tooltip.style('top', (event.pageY-15)+'px').style('left',(event.pageX+7)+'px');
+      })
+      .on("mouseout",function(d,i){
+          d3.select(this)
+              .attr("fill","green");
+          tooltip.style('visibility', 'hidden');
+      })
+      .on("click",function(d,i){
+          alert(d);
+      });
+
+
+  svg.append("text")
+    .text(now)
+    .attr("x",100)
+    .attr("y",125)
+    .attr("fill","red")
+    .attr("font-size",30);
+  svg.append("text")
+    .text(formatSeconds(now))
+    .attr("x",100)
+    .attr("y",100)
+    .attr("fill","red")
+    .attr("font-size",30);
+
+
+
+function gradeDay(){
+  var objS = document.getElementById("day");
+  var day = objS.options[objS.selectedIndex].value;
+  tday=parseInt(day);
+  console.log("tday",tday);
+  init();
+}
+function gradeFloor(){
+  var objS = document.getElementById("floor");
+  var floor = objS.options[objS.selectedIndex].value;
+  tfloor=parseInt(floor);
+  console.log("tfloor",tfloor);
+  init();
+}
+
+    
+    
+}
+    
+//添加点击事件
+d3.select("#add")
+    .on("click", function(){
+      t+=1;
+      draw(t);
+    });    
+d3.select("#sub")
+    .on("click",function(){
+      t-=1;
+      draw(t);
+    });
+//点击按钮时间停止或开始
+function resetted() {
+  t+=1;
+  draw(t);   
+  
+} 
+  
+  
+  
+  
+  
+  
+//添加拖动条事件
+					$.fn.RangeSlider = function (cfg) {
+						this.sliderCfg = {
+							min: cfg && !isNaN(parseFloat(cfg.min)) ? Number(cfg.min) : null,
+							max: cfg && !isNaN(parseFloat(cfg.max)) ? Number(cfg.max) : null,
+							step: cfg && Number(cfg.step) ? cfg.step : 1,
+							callback: cfg && cfg.callback ? cfg.callback : null
+						};
+
+						var $input = $(this);
+						var min = this.sliderCfg.min;
+						var max = this.sliderCfg.max;
+						var step = this.sliderCfg.step;
+						var callback = this.sliderCfg.callback;
+
+						$input.attr('min', min)
+							.attr('max', max)
+							.attr('step', step)
+							.attr('value', 0);
+
+						$input.bind("input", function (e) {
+							$input.attr('value', this.value);
+							$input.css('background-size', this.value * 100.0 / max + '% 100%');
+
+							if ($.isFunction(callback)) {
+								callback(this);
+							}
+						});
+					};
+
+          var before=0;
+          var now=0;
+					var change = function ($input) {
+						/*拖动滑块的事件，内容可自行定义*/
+            now = $("#slider").val();
+            
+            svg.selectAll("text").remove();
+            //svg.selectAll("g").remove();
+            
+            svg.append("text")
+              .text(now)
+              .attr("x",100)
+              .attr("y",125)
+              .attr("fill","red")
+              .attr("font-size",30);
+            svg.append("text")
+              .text(formatSeconds(now))
+              .attr("x",100)
+              .attr("y",100)
+              .attr("fill","red")
+              .attr("font-size",30);           
+            
+            
+            tp=numwhent(now,1);//t时刻第一层楼的人员数组
+          
+            
+            console.log("tp",tp)
+            console.log("tpbefore",tpbefore);
+            if(tpbefore.length!=0 && typeof(tpbefore)!="undefined"){
+                
+                let j1=0;
+                people.each(function(d,i){//更新现有数据
+                  //console.log("feikong",d);
+                  if(d.id==tp[j1].id){
+                    d=tp[j1];
+                    j1++;
+                  }
+
+
+                });
+                people.data(tpbefore).transition()//现有数据的动画
+                    .duration(10000)
+                    .ease("linear")
+                    .attr("cx", function(d) {
+
+                        return xScale(coordinate(d.sid).y+Math.random(1));
+                    })
+                    .attr("cy", function(d) {
+                        return yScale(coordinate(d.sid).x+Math.random(1));
+                    })
+              
+                j1=0;
+                people.each(function(d,i){//删除指定数据
+                  if(d.id!=tp[j1].id){
+                    d3.select(this).remove();
+                    tpbefore.splice(i,1);
+                  }
+                  else{
+                    j1++;
+                  }
+                });
+            }
+            else{
+              
+            }
+
+            
+            
+            
+            
+  people = g.selectAll("circle")//重新绑定数据
+      .data(tp)
+      .enter()
+      .append("circle")			
+      .attr("cx", function(d) {
+
+          return xScale(coordinate(d.sid).y+Math.random(1));
+      })
+      .attr("cy", function(d) {
+          return yScale(coordinate(d.sid).x+Math.random(1));
+      })
+      .attr("r", 3)
+      .attr("fill","green")
+      .on("mouseover",function(d,i){
+          d3.select(this)
+              .attr("fill","yellow");
+
+          tooltip.style('visibility', 'visible').text("id:"+d.id+"   coordinate("+coordinate(d.sid).x+","+coordinate(d.sid).y+")");
+      })
+      .on("mousemove",function(d,i){
+          tooltip.style('top', (event.pageY-15)+'px').style('left',(event.pageX+7)+'px');
+      })
+      .on("mouseout",function(d,i){
+          d3.select(this)
+              .attr("fill","green");
+          tooltip.style('visibility', 'hidden');
+      })
+      .on("click",function(d,i){
+          alert(d);
+      });
+     
+      tpbefore=tp; 
+      console.log("fuzhi",tpbefore);
+            
+            
+					};
+					$('#slider').RangeSlider({ min: 0, max: 86399, step: 1, callback: change });
+}
+
+
+   </script>
+  </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

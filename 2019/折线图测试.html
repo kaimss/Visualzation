@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>无标题文档</title>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script> 
+</head>
+<style>
+	.axis path,
+	.axis line{
+		fill:none;
+		stroke:black;
+		shape-rendering:crispEdges;
+	}
+</style>
+<body>
+</body>
+<script>
+    let w = 1000;
+    let h = 600;
+    let barPadding = 50;
+    let svg = d3.select("body").append("svg").attr("width",w).attr("height",h);//把append()返回的新元素保存在了变量svg中
+    
+    
+    var test=[0,10,20,50,60,70,80,50,30,20,10,0];
+    //定义两个颜色
+    var colors=[d3.rgb(0,0,255),d3.rgb(0,255,0)];
+    var xScale = d3.scale.linear().range([0,w-2*barPadding]).domain([0,12]); 
+    var yScale = d3.scale.linear().range([0,h-2*barPadding]).domain([100,0]);
+    
+    
+    //创建一个直线生成器
+    var linePath=d3.svg.line()
+                    .x(function(d,i){
+                        console.log(xScale(i));
+                        return xScale(i);
+                    })
+                    .y(function(d){
+                        console.log(d);
+                        return yScale(d);
+                    })
+                    .interpolate("basis");
+    
+
+    svg.append("path")
+        .attr("transform","translate("+barPadding+","+barPadding+")")
+        .attr("d",linePath(test))
+        .attr("fill","none")
+        .attr("stroke-width",3)
+        .attr("stroke","black");
+
+        var xAxis=d3.svg.axis()
+                    .scale(xScale)
+                    .ticks(10)
+                    .tickFormat(d3.format("d"))
+                    .orient("bottom");
+
+        var yAxis=d3.svg.axis()
+                    .scale(yScale)
+                    .orient("left");
+
+        //添加一个g用于放x轴
+        svg.append("g")
+            .attr("class","axis")
+            .attr("transform","translate("+barPadding+","+(h-barPadding)+")")
+            .call(xAxis);
+
+        svg.append("g")
+            .attr("class","axis")
+            .attr("transform","translate("+barPadding+","+barPadding+")")
+            .call(yAxis);
+
+
+    
+</script>
+</html>

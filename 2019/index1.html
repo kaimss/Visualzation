@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>census</title>
+		<script src="js/d3.v3.min.js"></script>
+		<script src="js/d3-queue.v3.min.js"></script>
+<!--
+		<script src="https://d3js.org/d3.v3.min.js"></script>
+		<script src="https://d3js.org/d3-queue.v3.min.js"></script>
+-->
+	</head>
+    <style>
+/*
+    	.axis path,
+        .axis line{
+            fill:none;
+            stroke:black;
+            shape-rendering:crispEdges;
+        }
+        .axis text{
+            font-size:8px;
+        }
+*/
+        body {
+            font: 10px sans-serif;
+            margin: 50px;
+        }
+
+        .grid .tick {
+            stroke: lightgrey;
+            opacity: 0.7;
+            shape-rendering: crispEdges;
+        }
+
+        .grid path {
+            stroke-width: 0;
+        }
+
+        .axis path {
+            fill: none;
+            stroke: #bbb;
+            shape-rendering: crispEdges;
+        }
+
+        .axis text {
+            fill: #555;
+        }
+
+        .axis line {
+            stroke: #e7e7e7;
+            shape-rendering: crispEdges;
+        }
+
+        .axis .axis-label {
+            font-size: 14px;
+        }
+
+        .line {
+            fill: none;
+            stroke-width: 1.5px;
+        }
+
+        .dot {
+            /* consider the stroke-with the mouse detect radius? */
+            stroke: transparent;
+            stroke-width: 10px;
+            cursor: pointer;
+        }
+
+        .dot:hover {
+            stroke: rgba(68, 127, 255, 0.3);
+        }
+    </style>
+
+ <body>
+<button>Reset</button>
+<script type="text/javascript">
+//通过sid判断是否在主会场
+function isMain(sid){
+    sid=parseInt(sid);
+    let floor=parseInt(sid/10000);
+    let x=parseInt((sid-floor*10000)/100);
+    let y=parseInt((sid-floor*10000-x*100));
+    if(floor==1&&x>=2&&x<=11&&y>=15&&y<=18)
+        return true;
+    else
+        return false;
+} 
+//通过sid判断是否在展厅
+function isExhibition(sid){
+    sid=parseInt(sid);
+    let floor=parseInt(sid/10000);
+    let x=parseInt((sid-floor*10000)/100);
+    let y=parseInt((sid-floor*10000-x*100));
+    if(floor==1&&x>=2&&x<=11&&y>=19&&y<=28)
+        return true;
+    else
+        return false;
+}        
+function ChangeHourMinutestr(str) {
+    if (str !== "0" && str !== "" && str !== null) {
+        return ((Math.floor(str / 60)).toString().length < 2 ? "0" + (Math.floor(str / 60)).toString() : 
+        (Math.floor(str / 60)).toString()) + ":" + ((str % 60).toString().length < 2 ? "0" + (str % 60).toString() : (str % 60).toString());
+    }
+    else{
+        return "";
+    }
+}       
+       
+
+	   var locations = new Array();// var locations = [];
+	   var day1 = new Array();
+	   var day2 = new Array();
+	   var day3 = new Array();
+       var other = new Array(24*60*60);
+       var sumpertimeMAIN = new Array(24*60*60);
+       var sumpertimeEXHIBITION = new Array(24*60*60);
+       other.fill(0);
+       sumpertimeMAIN.fill(0);
+       sumpertimeEXHIBITION.fill(0);
+       
+       
+       
+	   var q = d3.queue();
+	   q.defer(d3.csv, "location.csv")
+	   	.defer(d3.csv, 'log/day1.csv')
+	   	.defer(d3.csv, 'log/day2.csv')
+	    .defer(d3.csv, 'log/day3.csv')
+    	.await(processData);
+    
+ 
+    	   
+function processData(error, data0, data1, data2, data3) {
+    // do something with the data
+//	console.log("ERROR",error);
+//	console.log("locations",data0);
+//    console.log("day1", data1);
+//    console.log("day2", data2);
+//    console.log("day3", data3);
+
+    //主会场与展厅
+    for(var i=0;i<data1.length;i++){
+        if(isMain(data1[i].sid)){
+            sumpertimeMAIN[data1[i].time]+=1;
+        }
+        else if(isExhibition(data1[i].sid)){
+            sumpertimeEXHIBITION[data1[i].time]+=1;
+        }
+    }
+    var sumperminMAIN=[];
+    for(var i=0;i<sumpertimeMAIN.length;i=i+60){
+        var temp=0;
+        for(var j=0;j<59;j++){
+            temp+=sumpertimeMAIN[i+j];
+        }
+        sumperminMAIN[i/60]=temp/60;
+        
+    }
+    var sumperminEXHIBITION=[];
+    for(var i=0;i<sumpertimeEXHIBITION.length;i=i+60){
+        var temp=0;
+        for(var j=0;j<59;j++){
+            temp+=sumpertimeEXHIBITION[i+j];
+        }
+        sumperminEXHIBITION[i/60]=temp/60;
+        
+    }   
+    
+    
+    //console.log(sumperminMAIN);
+    //console.log("hour",ChangeHourMinutestr(60));
+	//console.log("test1",sumpertimeEXHIBITION);
+	//console.log("test2",sumpertimeMAIN);
+    var w = 800;
+    var h = 500;
+    var barPadding = 50;
+
+
+
+
+
+   
+
+
+
+
+    //添加比例尺
+    var xScale = d3.scale.linear()
+                .range([0,w])
+                .domain([1,sumperminMAIN.length]); 
+    var yScale = d3.scale.linear()
+                .range([0,h])
+                .domain([50,0]);
+    
+    var xAxis = d3.svg.axis()
+                .scale(xScale)
+                .ticks(30)
+                //.tickValues([60,120,180,240,300,360,420,480,540,600,660,720,780,840,900,960,1020,1080,1140,1200,1260,1320,1380,1440])
+                .tickFormat(function(d){
+                    console.log(d+"  "+ChangeHourMinutestr(d));
+                    return ChangeHourMinutestr(d);
+                })
+                .orient("bottom");
+    var yAxis = d3.svg.axis()
+                .scale(yScale)
+                .orient("left");
+    
+    //添加缩放与平移
+    var zoom = d3.behavior.zoom()  
+                .x(xScale)
+                .y(yScale)
+                .scaleExtent([1,10])//用于设置最小和最大的缩放比例  
+                .on("zoom",zoomed);
+
+    
+    //添加画布
+    var svg = d3.select("body")
+                .append("svg")
+                .attr("width",w + 2*barPadding)
+                .attr("height",h + 2*barPadding)
+                .call(zoom)
+                .append("g")
+                .attr("transform", "translate(" + barPadding + "," + barPadding + ")");;//绘制对象容器
+    
+    
+    //添加坐标轴
+    var gX = svg.append("g")
+                .attr("class","x axis ")
+                .attr("transform","translate(0,"+h+")")
+                .call(xAxis);
+
+    var gY = svg.append("g")
+                .attr("class","y axis")
+                .call(yAxis);
+    
+    
+    //创建一个直线生成器
+    var linePath=d3.svg.line()
+                    .x(function(d,i){
+                        return xScale(i);
+                    })
+                    .y(function(d){
+                        return yScale(d);
+                    })
+                    .interpolate("linear");
+  
+
+    //添加路径
+    var t1 = svg.append("path")
+                .attr("class", "line")
+                .attr("id","one")
+                .attr("d",linePath(sumperminMAIN))
+                .attr("clip-path", "url(#clip)")
+                //.attr("transform","translate("+barPadding+","+barPadding+")")
+//                .attr("fill","none")
+//                .attr("stroke-width",1)
+                .attr("stroke","black");
+    
+    var t2 = svg.append("path")
+                .attr("class", "line")
+                .attr("id","two")
+                .attr("d",linePath(sumperminEXHIBITION))
+                .attr("clip-path", "url(#clip)")
+                //.attr("transform","translate("+barPadding+","+barPadding+")")
+//                .attr("fill","none")
+//                .attr("stroke-width",1)
+                .attr("stroke","blue");
+
+
+    svg.append("text")
+            .attr("x",w)
+			.attr("y",h)
+			.text("时间")
+			.attr("font-size",15);
+
+
+    svg.append("text")
+            .attr("x",0)
+			.attr("y",0)
+			.text("人数/人")
+			.attr("font-size",15);    
+    
+
+    d3.select("svg").append("rect")
+            .attr("x",w-110)
+            .attr("y",75)
+            .attr("width",40)
+            .attr("height",2)
+            .attr("fill","black");
+    d3.select("svg").append("text")
+            .attr("x",w-65)
+            .attr("y",80)
+            .text("主会场");
+
+    d3.select("svg").append("rect")
+            .attr("x",w-110)
+            .attr("y",90)
+            .attr("width",40)
+            .attr("height",2)
+            .attr("fill","blue");
+    d3.select("svg").append("text")
+            .attr("x",w-65)
+            .attr("y",95)
+            .text("展厅");
+
+    //缩放平移回调函数
+    function zoomed(){  
+        //console.log(d3.event.translate);
+        //svg.attr("transform","translate("+d3.event.translate+")scale("+d3.event.scale+")");
+        svg.select('#one').attr('d', linePath(sumperminMAIN));
+        svg.select('#two').attr('d', linePath(sumperminEXHIBITION));
+        svg.select(".axis.x").call(xAxis);
+        svg.select(".axis.y").call(yAxis);
+    } //d3.event.translate 是平移的坐标值，d3.event.scale 是缩放的值。
+
+     //按钮点击回复
+    d3.select("button")
+      .on("click",function(){
+//          svg.transition()
+//              .duration(750)
+//              .call(zoom.transform, d3.zoomIdentity);
+            svg.transition()
+             .duration(750)
+             .attr("transform","translate("+0+")scale("+1+")")  ;
+        });  
+
+}
+
+
+   </script>
+  </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

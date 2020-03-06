@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>无标题文档</title>
+<script src="js/d3.v3.min.js"></script>
+</head>
+
+<body>
+</body>
+<script>
+    
+    
+
+
+    
+    
+    
+//画布大小
+var width = 1500, height = 500;
+
+// 在body里添加一个SVG画布
+var svg = d3.select("body")
+    .append("svg")
+    .attr("width",width)
+    .attr("height",height);
+
+// 画布周边的空白
+var padding = {left: 30, right: 30, top: 20, bottom: 20};
+
+// 定义一个数组
+var dataset = new Array(24*60);
+dataset.fill(0);
+dataset[5]=20;
+// x轴的比例尺
+var xScale = d3.scale.linear()
+    .domain([0,dataset.length])
+    .range([0, width-padding.left - padding.right]);
+
+// y轴的比例尺
+var yScale = d3.scale.linear()
+    .domain([0, d3.max(dataset)])
+    .range([height - padding.top - padding.bottom, 0]);
+
+// 定义x轴
+var xAxis = d3.svg.axis()
+    .scale(xScale)
+    .tickValues([60,120,180,240,300,360,420,480,540,600,660,720,780,840,900,960,1020,1080,1140,1200,1260,1320,1380,1440])
+    .orient("bottom");
+
+// 定义y轴
+var yAxis = d3.svg.axis()
+    .scale(yScale)
+    .orient("left");
+
+
+
+// 添加x轴
+svg.append("g")
+    .attr("class","axis")
+    .attr("transform","translate("+ padding.left + "," +(height-padding.bottom)+")")
+    .call(xAxis);
+
+// 添加y轴
+svg.append("g")
+    .attr("class","axis")
+    .attr("transform","translate("+ padding.left + "," + padding.top + ")")
+    .call(yAxis);
+</script>
+</html>
